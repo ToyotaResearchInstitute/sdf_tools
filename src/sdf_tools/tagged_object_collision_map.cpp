@@ -549,14 +549,24 @@ TaggedObjectCollisionMapGrid::ExtractComponentSurfaces(
 }
 
 uint32_t TaggedObjectCollisionMapGrid::UpdateConvexSegments(
-    const double connected_threshold)
+    const double connected_threshold,
+    const bool add_virtual_border)
 {
   const auto sdf_result
-      = ExtractFreeAndNamedObjectsSignedDistanceField(
-          std::numeric_limits<float>::infinity());
+      = (add_virtual_border) ?
+          ExtractSignedDistanceField(
+            std::numeric_limits<float>::infinity(),
+            std::vector<uint32_t>(),
+            true) :
+          ExtractFreeAndNamedObjectsSignedDistanceField(
+            std::numeric_limits<float>::infinity());
   const SignedDistanceField& sdf = sdf_result.first;
   const VoxelGrid<Eigen::Vector3d> extrema_map = sdf.ComputeLocalExtremaMap();
   // Make the helper functions
+  // This is not enough, we also need to limit the curvature of the
+  // segment/local extrema cluster! Otherwise thin objects will always have
+  // their local extrema dominated by their surroundings rather than their
+  // own structure!
   const std::function<bool(const GRID_INDEX&, const GRID_INDEX&)>
     are_connected_fn
       = [&] (const GRID_INDEX& index1, const GRID_INDEX& index2)
